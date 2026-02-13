@@ -20,7 +20,7 @@ build/
 backend/credentials/
 frontend/credentials/
 ml-service/credentials/
-*.json
+
 !package.json
 !package-lock.json
 !tsconfig.json
