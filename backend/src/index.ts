@@ -8,6 +8,7 @@ import compression from 'compression';
 import { connectDB } from './utils/db.js';
 import { connectRedis } from './utils/redis.js';
 import { logger } from './utils/logger.js';
+
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import diseaseRoutes from './routes/disease.routes.js';
@@ -16,8 +17,13 @@ import weatherRoutes from './routes/weather.routes.js';
 import marketRoutes from './routes/market.routes.js';
 import advisoryRoutes from './routes/advisory.routes.js';
 import schemeRoutes from './routes/scheme.routes.js';
+
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.middleware.js';
 import { performanceMonitoring, cacheControl, addResponseTimeHeader } from './middleware/performance.middleware.js';
+
+// ✅ Step 7 + Step 8 imports
+import { startSchemeCron } from './cron/scheme.cron.js';
+import { updateSchemes } from './services/scheme.service.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -75,8 +81,8 @@ app.get('/health', async (_req, res) => {
 });
 
 app.get('/', (_req, res) => {
-  res.json({ 
-    message: 'Farmly AI API', 
+  res.json({
+    message: 'Farmly AI API',
     version: '1.0.0',
     docs: '/api/docs'
   });
@@ -89,17 +95,27 @@ app.use(errorHandler);
 async function startServer() {
   try {
     await connectDB();
-    
+
     // Try Redis but don't fail if it's not available
     try {
       await connectRedis();
     } catch (redisError) {
       logger.warn('Redis connection failed, continuing without cache:', redisError);
     }
-    
+
+    // ✅ STEP 7: Start cron job
+    startSchemeCron();
+
     app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV}`);
+
+      // ✅ STEP 8: Update schemes in background after startup
+      updateSchemes().then((updated) => {
+        logger.info(`✅ Initial Scheme Update done: ${updated}`);
+      }).catch((err) => {
+        logger.error('❌ Initial scheme update failed:', err);
+      });
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
