@@ -22,17 +22,20 @@ export const OnboardingPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { updateProfile, loading: userLoading } = useUserStore();
   const { setUser, user: authUser } = useAuthStore();
-  const { 
-    latitude, 
-    longitude, 
+  const {
+    latitude,
+    longitude,
     address: geoAddress,
     city: geoCity,
     state: geoState,
     district: geoDistrict,
-    error: geoError, 
-    loading: geoLoading, 
-    getCurrentLocation 
+    error: geoError,
+    loading: geoLoading,
+    getCurrentLocation
   } = useGeolocation();
+
+  // Check if user is editing an existing profile
+  const isEditing = authUser?.onboardingCompleted === true;
 
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('language');
   const [selectedLanguage, setSelectedLanguage] = useState<string>(i18n.language);
@@ -45,6 +48,52 @@ export const OnboardingPage: React.FC = () => {
   const [landSize, setLandSize] = useState('');
   const [soilType, setSoilType] = useState<typeof SOIL_TYPES[number] | ''>('');
   const [error, setError] = useState('');
+
+  // Pre-populate form fields from existing profile when editing
+  useEffect(() => {
+    if (isEditing && authUser) {
+      // Pre-fill name
+      if (authUser.name) {
+        setName(authUser.name);
+      }
+      // Pre-fill language
+      if (authUser.language) {
+        setSelectedLanguage(authUser.language);
+      }
+
+      if (authUser.farmProfile) {
+        // Pre-fill crops
+        if (authUser.farmProfile.crops && authUser.farmProfile.crops.length > 0) {
+          setSelectedCrops(authUser.farmProfile.crops);
+        }
+        // Pre-fill land size
+        if (authUser.farmProfile.landSize) {
+          setLandSize(String(authUser.farmProfile.landSize));
+        }
+        // Pre-fill soil type
+        if (authUser.farmProfile.soilType) {
+          setSoilType(authUser.farmProfile.soilType);
+        }
+        // Pre-fill location
+        if (authUser.farmProfile.location) {
+          const loc = authUser.farmProfile.location;
+          if (loc.address) {
+            setAddress(loc.address);
+            setUseManualLocation(true);
+          }
+          if (loc.state) {
+            setState(loc.state);
+          }
+          if (loc.district) {
+            setDistrict(loc.district);
+          }
+        }
+      }
+
+      // Skip language step when editing — start at name
+      setCurrentStep('name');
+    }
+  }, []); // Run only on mount
 
   useEffect(() => {
     if (geoAddress && !useManualLocation) {
@@ -106,7 +155,11 @@ export const OnboardingPage: React.FC = () => {
   const handleBack = () => {
     setError('');
     if (currentStep === 'name') {
-      setCurrentStep('language');
+      if (isEditing) {
+        navigate('/profile');
+      } else {
+        setCurrentStep('language');
+      }
     } else if (currentStep === 'location') {
       setCurrentStep('name');
     } else if (currentStep === 'crops') {
@@ -121,6 +174,7 @@ export const OnboardingPage: React.FC = () => {
   const handleComplete = async () => {
     try {
       let locationData: {
+        type: 'Point';
         coordinates: [number, number];
         address?: string;
         state?: string;
@@ -132,6 +186,7 @@ export const OnboardingPage: React.FC = () => {
         // TODO: Implement proper geocoding API in future
         // Default to center of India for MVP
         locationData = {
+          type: 'Point',
           coordinates: [78.9629, 20.5937] as [number, number], // Center of India
           address,
           state,
@@ -139,6 +194,7 @@ export const OnboardingPage: React.FC = () => {
         };
       } else if (latitude && longitude) {
         locationData = {
+          type: 'Point',
           coordinates: [longitude, latitude] as [number, number],
           address,
           state,
@@ -158,13 +214,19 @@ export const OnboardingPage: React.FC = () => {
         onboardingCompleted: true
       });
 
-      // Update auth store's user object
+      // Update auth store's user object with ALL profile data
       if (authUser) {
         setUser({
           ...authUser,
           name: name.trim(),
           language: selectedLanguage as 'hi' | 'ta' | 'ml' | 'te' | 'kn' | 'en',
-          onboardingCompleted: true
+          onboardingCompleted: true,
+          farmProfile: {
+            location: locationData,
+            crops: selectedCrops,
+            landSize: parseFloat(landSize),
+            soilType: soilType as typeof SOIL_TYPES[number]
+          }
         });
       }
 

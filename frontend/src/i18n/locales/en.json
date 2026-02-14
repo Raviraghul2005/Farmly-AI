@@ -169,6 +169,12 @@
       "stable": "Stable"
     },
     "retry": "Retry",
+    "perKg": "per Kg",
+    "recommendations": {
+      "rising": "Prices are rising. Consider selling soon for better returns.",
+      "falling": "Prices are falling. Consider holding your stock if possible.",
+      "stable": "Prices are stable. Good time for steady sales."
+    },
     "errors": {
       "loadFailed": "Failed to load market prices. Please try again."
     },

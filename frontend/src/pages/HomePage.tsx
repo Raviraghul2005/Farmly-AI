@@ -76,6 +76,7 @@ export const HomePage: React.FC = () => {
           <p className="text-green-100 text-sm md:text-base">
             {t('onboarding.subtitle')}
           </p>
+
           {user?.farmProfile && (
             <div className="mt-4 flex flex-wrap gap-2 text-sm">
               {user.farmProfile.location && (
@@ -84,12 +85,16 @@ export const HomePage: React.FC = () => {
                       (user.farmProfile.location.district && user.farmProfile.location.state 
                         ? `${user.farmProfile.location.district}, ${user.farmProfile.location.state}`
                         : user.farmProfile.location.state || 
-                          `${user.farmProfile.location.coordinates[1].toFixed(4)}°N, ${user.farmProfile.location.coordinates[0].toFixed(4)}°E`)}
+                          (user.farmProfile.location.coordinates?.length >= 2
+                            ? `${user.farmProfile.location.coordinates[1].toFixed(4)}°N, ${user.farmProfile.location.coordinates[0].toFixed(4)}°E`
+                            : 'Location not available'))}
                 </span>
               )}
+
               <span className="bg-white/20 rounded-full px-3 py-1 min-h-[32px] flex items-center">
                 🌾 {user.farmProfile.crops.length} {user.farmProfile.crops.length === 1 ? 'Crop' : 'Crops'}
               </span>
+
               <span className="bg-white/20 rounded-full px-3 py-1 min-h-[32px] flex items-center">
                 📏 {user.farmProfile.landSize} {t('onboarding.acres')}
               </span>
